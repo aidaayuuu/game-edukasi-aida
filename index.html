@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Barisan & Deret — Classroom Edition (vFinal)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;600&display=swap');
+  :root{
+    --bg:#103a2d; --panel: rgba(255,255,255,0.03);
+    --chalk:#e9f5ea; --accent:#cbe7b8; --ok:#7ef0a4; --wrong:#ff9aa2;
+    --card-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:'Heebo',system-ui,Roboto,Arial;
+    background:linear-gradient(180deg,var(--bg),#092a20);
+    color:var(--chalk); -webkit-font-smoothing:antialiased;
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:18px;
+  }
+  .frame{width:100%; max-width:980px}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .logo{background:#134b35;padding:10px 16px;border-radius:10px;box-shadow:var(--card-shadow);font-weight:700}
+  .muted{color:var(--accent);font-size:13px}
+  .board{display:grid;grid-template-columns:1fr 360px;gap:16px}
+  @media(max-width:900px){.board{grid-template-columns:1fr}}
+  .panel{background:var(--panel);padding:18px;border-radius:12px;box-shadow:var(--card-shadow)}
+  .tabs{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .tab{padding:10px 12px;border-radius:8px;border:1px dashed rgba(255,255,255,0.04);cursor:pointer}
+  .tab.active{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1)}
+  input[type=text]{width:78%;padding:10px;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:var(--chalk)}
+  .btn{padding:10px 14px;border-radius:8px;cursor:pointer;border:none;font-weight:600}
+  .btn.primary{background:#c7f0b7;color:#06321f}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--chalk)}
+  .btn.next{background:#7fbf8a;color:#052618}
+  #questionText{font-size:18px;min-height:72px;white-space:pre-wrap}
+  .options{display:grid;gap:10px;grid-template-columns:1fr 1fr;margin-top:12px}
+  @media(max-width:520px){.options{grid-template-columns:1fr}}
+  .opt{background:transparent;border:1px solid rgba(255,255,255,0.05);padding:12px;border-radius:8px;cursor:pointer;transition:transform .12s}
+  .opt:hover{transform:translateY(-3px)}
+  .opt.correct{background:rgba(126,240,164,0.1);border-color:rgba(126,240,164,0.3)}
+  .opt.wrong{background:rgba(255,154,156,0.1);border-color:rgba(255,154,156,0.3)}
+  .meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+  .timer{font-weight:700;font-size:16px;color:var(--accent)}
+  .progressbar{height:10px;background:rgba(255,255,255,0.04);border-radius:8px;overflow:hidden}
+  .progress{height:100%;width:0%;background:linear-gradient(90deg,#a7e29f,#5fb87a);transition:width .25s}
+  .explain{margin-top:8px;color:var(--accent);font-size:14px;min-height:44px}
+  #leaderboardList{list-style:none;padding:0;margin:0}
+  #leaderboardList li{padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,0.05);display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="frame">
+  <header>
+    <div class="logo">📘 Papan Tulis — Barisan & Deret</div>
+    <div class="muted">Mode: Kelas | Responsive</div>
+  </header>
+
+  <main class="board">
+    <section class="panel">
+      <!-- Menu -->
+      <div id="menuArea">
+        <h2>Masukkan Nama & Pilih Tingkat</h2>
+        <input id="nameInput" type="text" placeholder="Nama siswa..." />
+        <div class="tabs" id="typeTabs">
+          <div class="tab" data-level="easy">Mudah</div>
+          <div class="tab active" data-level="medium">Sedang</div>
+          <div class="tab" data-level="hard">Sulit</div>
+        </div>
+        <div style="margin-top:10px">
+          <button class="btn primary" id="startBtn">Mulai</button>
+          <button class="btn ghost" id="showPoolBtn">Info Soal</button>
+          <button class="btn ghost" id="resetUsedBtn">Reset Riwayat Soal</button>
+        </div>
+      </div>
+
+      <!-- Game -->
+      <div id="gameArea" style="display:none">
+        <div class="meta">
+          <div class="muted">Pemain: <span id="playerLabel"></span></div>
+          <div class="timer">Waktu: <span id="timeLeft">20</span>s</div>
+        </div>
+        <div id="questionText"></div>
+        <div class="options" id="optionsGrid"></div>
+        <div class="explain" id="explanation"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+          <button class="btn next" id="nextBtn" disabled>Soal Berikutnya</button>
+          <button class="btn ghost" id="quitBtn">Berhenti</button>
+          <div style="flex:1"></div>
+          <div style="width:160px"><div class="progressbar"><div id="prog" class="progress"></div></div></div>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div id="resultArea" style="display:none">
+        <h3>Hasil</h3>
+        <div><strong id="resultPlayer"></strong></div>
+        <div class="muted">Skor: <span id="resultScore"></span> / 5</div>
+        <div style="margin-top:12px">
+          <button class="btn primary" id="playAgainBtn">Main Lagi</button>
+          <button class="btn ghost" id="backHomeBtn">Ke Beranda</button>
+        </div>
+        <div style="margin-top:12px">
+          <h4 class="muted">Pembahasan singkat</h4>
+          <div id="allExplanations" class="explain"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sidebar -->
+    <aside class="panel">
+      <h4 class="muted">🏆 Leaderboard</h4>
+      <ol id="leaderboardList"></ol>
+      <h4 class="muted" style="margin-top:12px">📘 Info Soal</h4>
+      <ul id="poolInfo" style="margin:8px 0 12px 16px"></ul>
+    </aside>
+  </main>
+</div>
+
+<audio id="sndCorrect" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<audio id="sndWrong" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+<audio id="sndTime" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+
+<script>
+const mkid = (p,n)=>`${p}-${n}`;
+const easy=[
+{id:mkid('e',1),q:"Barisan 2,5,8,11,... adalah barisan?",options:["Aritmetika","Geometri","Campuran","Tak tentu"],answer:0,explanation:"Beda tetap 3 → aritmetika."},
+{id:mkid('e',2),q:"Rasio barisan 2,6,18,54 adalah...",options:["2","3","4","6"],answer:1,explanation:"r=6/2=3."},
+{id:mkid('e',3),q:"Beda barisan -5,-3,-1,1,3 adalah...",options:["-5","-3","-2","2"],answer:3,explanation:"Selisih tetap 2."},
+{id:mkid('e',4),q:"Suku ke-5 dari 2,4,6,... adalah...",options:["8","9","10","11"],answer:2,explanation:"Un=a+(n-1)d=2+4*2=10."},
+{id:mkid('e',5),q:"Barisan 3,6,12,24,... merupakan?",options:["Aritmetika","Geometri","Konstan","Campuran"],answer:1,explanation:"r=2 → geometri."}
+];
+const medium=[
+{id:mkid('m',1),q:"Jika a1=2 dan beda=3, maka suku ke-5 adalah...",options:["11","14","15","17"],answer:1,explanation:"Un=a+(n-1)d=14."},
+{id:mkid('m',2),q:"Jumlah 6 suku pertama dari 1/2+1/4+1/8+... adalah...",options:["63/64","32/63","64/3","-63/64"],answer:0,explanation:"Sn=a(1-r^n)/(1-r)=63/64."},
+{id:mkid('m',3),q:"Suku ke-3 dan ke-7 barisan aritmetika 12 dan 32. Jumlah 8 suku pertama adalah...",options:["156","172","312","146"],answer:0,explanation:"a=2,d=5→S8=156."},
+{id:mkid('m',4),q:"U7=384, r=2. U10 adalah...",options:["1920","3072","4052","4608"],answer:1,explanation:"a=6, U10=3072."},
+{id:mkid('m',5),q:"Penjualan 120 kg naik 10 kg tiap bulan selama 10 bulan. Total?",options:["1050","1350","1650","1750"],answer:2,explanation:"S10=1650."}
+];
+const hard=[
+{id:mkid('h',1),q:"U3=2, U8=-13. Jumlah 20 suku pertama?",options:["-580","-490","-440","-410","-380"],answer:3,explanation:"d=-3,a=8,S20=-410."},
+{id:mkid('h',2),q:"U3=16,U7=256. Jumlah 7 suku pertama deret geometri adalah...",options:["504","508","512","516"],answer:1,explanation:"Jawaban 508."},
+{id:mkid('h',3),q:"Bola jatuh 4m memantul 3/5 tinggi. Total lintasan?",options:["6","10","12","16"],answer:3,explanation:"Total=16."},
+{id:mkid('h',4),q:"Modal 5jt bunga majemuk 9% 3 tahun. Nilai akhir?",options:["5.94 jt","6.23 jt","6.475 jt","7.058 jt"],answer:2,explanation:"≈6.475 jt."},
+{id:mkid('h',5),q:"Konsumsi gula 1000kg tiap tahun dobel 6 th. Total?",options:["63000","64000","65000","66000"],answer:0,explanation:"=63.000 kg."}
+];
+const POOLS={easy,medium,hard};
+const QUESTIONS_PER_SESSION=5,TIMER_PER_QUESTION=20;
+const el=(id)=>document.getElementById(id);
+const nameInput=el('nameInput'),startBtn=el('startBtn'),tabs=document.querySelectorAll('.tab'),
+menuArea=el('menuArea'),gameArea=el('gameArea'),resultArea=el('resultArea'),
+playerLabel=el('playerLabel'),questionText=el('questionText'),optionsGrid=el('optionsGrid'),
+explanationEl=el('explanation'),nextBtn=el('nextBtn'),quitBtn=el('quitBtn'),
+prog=el('prog'),timeLeftEl=el('timeLeft'),resultPlayer=el('resultPlayer'),
+resultScore=el('resultScore'),playAgainBtn=el('playAgainBtn'),backHomeBtn=el('backHomeBtn'),
+leaderboardList=el('leaderboardList'),poolInfo=el('poolInfo'),
+sndCorrect=el('sndCorrect'),sndWrong=el('sndWrong'),sndTime=el('sndTime'),
+allExplanations=el('allExplanations');
+let STATE={player:'',level:'medium',sessionQuestions:[],currentIndex:0,answers:[],timerId:null,timeLeft:TIMER_PER_QUESTION};
+function setActiveTab(lvl){tabs.forEach(t=>t.classList.toggle('active',t.dataset.level===lvl));STATE.level=lvl;}
+tabs.forEach(t=>t.addEventListener('click',()=>setActiveTab(t.dataset.level)));setActiveTab('medium');
+function getUsed(){try{return new Set(JSON.parse(localStorage.getItem('usedQuestions')||'[]'));}catch(e){return new Set();}}
+function saveUsed(s){localStorage.setItem('usedQuestions',JSON.stringify([...s]));}
+function shuffle(a){const arr=a.slice();for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
+function getLB(){try{return JSON.parse(localStorage.getItem('bd_lb')||'[]');}catch(e){return[];}}
+function saveLB(lb){localStorage.setItem('bd_lb',JSON.stringify(lb));}
+function renderLB(){const lb=getLB();leaderboardList.innerHTML='';if(!lb.length)return leaderboardList.innerHTML='<li class="muted">Belum ada skor</li>';lb.forEach(r=>{const li=document.createElement('li');li.textContent=r.name;const sp=document.createElement('span');sp.textContent=`${r.score}/5`;li.appendChild(sp);leaderboardList.appendChild(li);});}
+function renderPoolInfo(){poolInfo.innerHTML='';['easy','medium','hard'].forEach(l=>{const li=document.createElement('li');li.textContent=`${l.toUpperCase()}: ${POOLS[l].length} soal`;poolInfo.appendChild(li);});}
+renderLB();renderPoolInfo();
+startBtn.onclick=()=>{const n=nameInput.value.trim();if(!n){alert('Masukkan nama dulu');return;}STATE.player=n;playerLabel.textContent=n;menuArea.style.display='none';beginSession();};
+function beginSession(){const pool=POOLS[STATE.level];let used=getUsed();let avail=pool.filter(q=>!used.has(q.id));if(avail.length<QUESTIONS_PER_SESSION){used=new Set();localStorage.removeItem('usedQuestions');avail=pool.slice();}const picked=shuffle(avail).slice(0,QUESTIONS_PER_SESSION);picked.forEach(q=>used.add(q.id));saveUsed(used);STATE.sessionQuestions=picked;STATE.currentIndex=0;STATE.answers=[];gameArea.style.display='block';renderQuestion();}
+function renderQuestion(){const q=STATE.sessionQuestions[STATE.currentIndex];questionText.textContent=`${STATE.currentIndex+1}. ${q.q}`;optionsGrid.innerHTML='';explanationEl.textContent='';q.options.forEach((o,i)=>{const d=document.createElement('div');d.className='opt';d.textContent=o;d.onclick=()=>choose(i,d);optionsGrid.appendChild(d);});prog.style.width=`${(STATE.currentIndex/QUESTIONS_PER_SESSION)*100}%`;nextBtn.disabled=true;nextBtn.textContent='Soal Berikutnya';startTimer();}
+function choose(i,elx){if(!nextBtn.disabled)return;stopTimer();const q=STATE.sessionQuestions[STATE.currentIndex];Array.from(optionsGrid.children).forEach(c=>c.style.pointerEvents='none');if(i===q.answer){elx.classList.add('correct');sndCorrect.play();}else{elx.classList.add('wrong');Array.from(optionsGrid.children)[q.answer].classList.add('correct');sndWrong.play();}STATE.answers.push({id:q.id,chosen:i,correct:q.answer});explanationEl.textContent=q.explanation;nextBtn.disabled=false;if(STATE.currentIndex===QUESTIONS_PER_SESSION-1)nextBtn.textContent='Selesai';}
+nextBtn.onclick=()=>{if(nextBtn.disabled)return;if(STATE.currentIndex<QUESTIONS_PER_SESSION-1){STATE.currentIndex++;renderQuestion();}else finishSession();};
+quitBtn.onclick=()=>{if(confirm('Kembali ke beranda?'))resetMenu();};
+function startTimer(){stopTimer();STATE.timeLeft=TIMER_PER_QUESTION;timeLeftEl.textContent=STATE.timeLeft;STATE.timerId=setInterval(()=>{STATE.timeLeft--;timeLeftEl.textContent=STATE.timeLeft;if(STATE.timeLeft<=0){stopTimer();sndTime.play();const q=STATE.sessionQuestions[STATE.currentIndex];STATE.answers.push({id:q.id,chosen:-1,correct:q.answer});Array.from(optionsGrid.children).forEach((c,idx)=>{c.style.pointerEvents='none';if(idx===q.answer)c.classList.add('correct');});explanationEl.textContent='Waktu habis. '+q.explanation;nextBtn.disabled=false;if(STATE.currentIndex===QUESTIONS_PER_SESSION-1)nextBtn.textContent='Selesai';}},1000);}
+function stopTimer(){if(STATE.timerId)clearInterval(STATE.timerId);STATE.timerId=null;}
+function finishSession(){stopTimer();gameArea.style.display='none';resultArea.style.display='block';const score=STATE.answers.filter(a=>a.chosen===a.correct).length;resultPlayer.textContent=STATE.player;resultScore.textContent=score;const lb=getLB();lb.push({name:STATE.player,score,when:Date.now()});lb.sort((a,b)=>b.score-a.score||a.when-b.when);saveLB(lb.slice(0,10));renderLB();allExplanations.innerHTML='';STATE.sessionQuestions.forEach((q,i)=>{const ans=STATE.answers[i];const user=ans.chosen>=0?q.options[ans.chosen]:'(tidak jawab)';const ok=ans.chosen===q.answer;const div=document.createElement('div');div.innerHTML=`<strong>${i+1}. ${q.q}</strong><div class="muted">Jawaban: ${q.options[q.answer]} • Kamu: ${user} ${ok?'✅':''}</div><div style="margin-top:4px">${q.explanation}</div>`;allExplanations.appendChild(div);});}
+function resetMenu(){stopTimer();STATE={player:'',level:'medium',sessionQuestions:[],currentIndex:0,answers:[],timerId:null,timeLeft:TIMER_PER_QUESTION};menuArea.style.display='block';gameArea.style.display='none';resultArea.style.display='none';nameInput.value='';setActiveTab('medium');}
+playAgainBtn.onclick=resetMenu;backHomeBtn.onclick=resetMenu;
+el('showPoolBtn').onclick=()=>alert(`Jumlah soal per level:\nMudah:${POOLS.easy.length}\nSedang:${POOLS.medium.length}\nSulit:${POOLS.hard.length}`);
+el('resetUsedBtn').onclick=()=>{if(confirm('Hapus riwayat soal yang sudah digunakan?')){localStorage.removeItem('usedQuestions');alert('Riwayat soal dihapus.');}};
+</script>
+</body>
+</html>
