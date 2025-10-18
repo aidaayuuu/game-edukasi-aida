@@ -15,7 +15,9 @@
     </header>
 
     <main class="board">
+      <!-- Panel Kiri -->
       <section class="panel">
+        <!-- Menu -->
         <div id="menuArea">
           <h2>Masukkan Nama & Pilih Tingkat Soal</h2>
           <input id="nameInput" type="text" placeholder="Nama siswa..." />
@@ -31,6 +33,7 @@
           </div>
         </div>
 
+        <!-- Game -->
         <div id="gameArea" style="display:none">
           <div class="meta">
             <div class="muted">Pemain: <span id="playerLabel"></span></div>
@@ -51,6 +54,7 @@
           </div>
         </div>
 
+        <!-- Hasil -->
         <div id="resultArea" style="display:none">
           <h3>🎯 Hasil Permainan</h3>
           <div><strong id="resultPlayer"></strong></div>
@@ -68,6 +72,7 @@
         </div>
       </section>
 
+      <!-- Panel Kanan -->
       <aside class="panel">
         <h4 class="muted">🏆 Leaderboard</h4>
         <ol id="leaderboardList"></ol>
@@ -77,11 +82,12 @@
     </main>
   </div>
 
-  <!-- Suara Efek -->
-  <audio id="sndCorrect" src="https://cdn.pixabay.com/audio/2022/03/15/audio_6cb61cb589.mp3"></audio> <!-- Suara pria: "Benar!" -->
-  <audio id="sndWrong" src="https://cdn.pixabay.com/audio/2022/03/15/audio_926bb2598c.mp3"></audio>  <!-- Suara pria: "Salah!" -->
+  <!-- Audio Efek -->
+  <audio id="sndCorrect" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+  <audio id="sndWrong" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
   <audio id="sndTime" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
 
+  <!-- Script -->
   <script>
   const mkid = (p,n)=>`${p}-${n}`;
   const easy=[
@@ -106,7 +112,6 @@
     {id:mkid('h',5),q:"Konsumsi gula 1000kg tiap tahun dobel 6 th. Total?",options:["63000","64000","65000","66000"],answer:0,explanation:"=63.000 kg."}
   ];
   const POOLS={easy,medium,hard},QUESTIONS_PER_SESSION=5,TIMER_PER_QUESTION=20;
-
   const el=id=>document.getElementById(id);
   const nameInput=el('nameInput'),startBtn=el('startBtn'),tabs=document.querySelectorAll('.tab'),
   menuArea=el('menuArea'),gameArea=el('gameArea'),resultArea=el('resultArea'),
@@ -117,32 +122,32 @@
   leaderboardList=el('leaderboardList'),poolInfo=el('poolInfo'),
   sndCorrect=el('sndCorrect'),sndWrong=el('sndWrong'),sndTime=el('sndTime'),
   allExplanations=el('allExplanations');
-
   let STATE={player:'',level:'medium',sessionQuestions:[],currentIndex:0,answers:[],timerId:null,timeLeft:TIMER_PER_QUESTION};
-
   function setActiveTab(lvl){tabs.forEach(t=>t.classList.toggle('active',t.dataset.level===lvl));STATE.level=lvl;}
   tabs.forEach(t=>t.addEventListener('click',()=>setActiveTab(t.dataset.level)));setActiveTab('medium');
-
+  function getUsed(){try{return new Set(JSON.parse(localStorage.getItem('usedQuestions')||'[]'));}catch(e){return new Set();}}
+  function saveUsed(s){localStorage.setItem('usedQuestions',JSON.stringify([...s]));}
   function shuffle(a){const arr=a.slice();for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
-  function beginSession(){
-    const pool=POOLS[STATE.level];
-    STATE.sessionQuestions=shuffle(pool).slice(0,QUESTIONS_PER_SESSION);
-    STATE.currentIndex=0;STATE.answers=[];
-    gameArea.style.display='block';menuArea.style.display='none';
-    renderQuestion();
-  }
-  startBtn.onclick=()=>{const n=nameInput.value.trim();if(!n){alert('Masukkan nama dulu');return;}STATE.player=n;playerLabel.textContent=n;beginSession();};
+  function getLB(){try{return JSON.parse(localStorage.getItem('bd_lb')||'[]');}catch(e){return[];}}
+  function saveLB(lb){localStorage.setItem('bd_lb',JSON.stringify(lb));}
+  function renderLB(){const lb=getLB();leaderboardList.innerHTML='';if(!lb.length)return leaderboardList.innerHTML='<li class="muted">Belum ada skor</li>';lb.forEach(r=>{const li=document.createElement('li');li.textContent=r.name;const sp=document.createElement('span');sp.textContent=`${r.score}/5`;li.appendChild(sp);leaderboardList.appendChild(li);});}
+  function renderPoolInfo(){poolInfo.innerHTML='';['easy','medium','hard'].forEach(l=>{const li=document.createElement('li');li.textContent=`${l.toUpperCase()}: ${POOLS[l].length} soal`;poolInfo.appendChild(li);});}
+  renderLB();renderPoolInfo();
+  startBtn.onclick=()=>{const n=nameInput.value.trim();if(!n){alert('Masukkan nama dulu');return;}STATE.player=n;playerLabel.textContent=n;menuArea.style.display='none';beginSession();};
+  function beginSession(){const pool=POOLS[STATE.level];let used=getUsed();let avail=pool.filter(q=>!used.has(q.id));if(avail.length<QUESTIONS_PER_SESSION){used=new Set();localStorage.removeItem('usedQuestions');avail=pool.slice();}const picked=shuffle(avail).slice(0,QUESTIONS_PER_SESSION);picked.forEach(q=>used.add(q.id));saveUsed(used);STATE.sessionQuestions=picked;STATE.currentIndex=0;STATE.answers=[];gameArea.style.display='block';renderQuestion();}
   function renderQuestion(){const q=STATE.sessionQuestions[STATE.currentIndex];questionText.textContent=`${STATE.currentIndex+1}. ${q.q}`;optionsGrid.innerHTML='';explanationEl.textContent='';q.options.forEach((o,i)=>{const d=document.createElement('div');d.className='opt';d.textContent=o;d.onclick=()=>choose(i,d);optionsGrid.appendChild(d);});prog.style.width=`${(STATE.currentIndex/QUESTIONS_PER_SESSION)*100}%`;nextBtn.disabled=true;nextBtn.textContent='Soal Berikutnya';startTimer();}
   function choose(i,elx){if(!nextBtn.disabled)return;stopTimer();const q=STATE.sessionQuestions[STATE.currentIndex];Array.from(optionsGrid.children).forEach(c=>c.style.pointerEvents='none');if(i===q.answer){elx.classList.add('correct');sndCorrect.play();}else{elx.classList.add('wrong');Array.from(optionsGrid.children)[q.answer].classList.add('correct');sndWrong.play();}STATE.answers.push({id:q.id,chosen:i,correct:q.answer});explanationEl.textContent=q.explanation;nextBtn.disabled=false;if(STATE.currentIndex===QUESTIONS_PER_SESSION-1)nextBtn.textContent='Selesai';}
   nextBtn.onclick=()=>{if(nextBtn.disabled)return;if(STATE.currentIndex<QUESTIONS_PER_SESSION-1){STATE.currentIndex++;renderQuestion();}else finishSession();};
   quitBtn.onclick=()=>{if(confirm('Kembali ke beranda?'))resetMenu();};
   function startTimer(){stopTimer();STATE.timeLeft=TIMER_PER_QUESTION;timeLeftEl.textContent=STATE.timeLeft;STATE.timerId=setInterval(()=>{STATE.timeLeft--;timeLeftEl.textContent=STATE.timeLeft;if(STATE.timeLeft<=0){stopTimer();sndTime.play();const q=STATE.sessionQuestions[STATE.currentIndex];STATE.answers.push({id:q.id,chosen:-1,correct:q.answer});Array.from(optionsGrid.children).forEach((c,idx)=>{c.style.pointerEvents='none';if(idx===q.answer)c.classList.add('correct');});explanationEl.textContent='Waktu habis. '+q.explanation;nextBtn.disabled=false;if(STATE.currentIndex===QUESTIONS_PER_SESSION-1)nextBtn.textContent='Selesai';}},1000);}
   function stopTimer(){if(STATE.timerId)clearInterval(STATE.timerId);STATE.timerId=null;}
-  function finishSession(){stopTimer();gameArea.style.display='none';resultArea.style.display='block';const score=STATE.answers.filter(a=>a.chosen===a.correct).length;resultPlayer.textContent=STATE.player;resultScore.textContent=score;allExplanations.innerHTML='';STATE.sessionQuestions.forEach((q,i)=>{const ans=STATE.answers[i];const user=ans.chosen>=0?q.options[ans.chosen]:'(tidak jawab)';const ok=ans.chosen===q.answer;const div=document.createElement('div');div.innerHTML=`<strong>${i+1}. ${q.q}</strong><div class="muted">Jawaban: ${q.options[q.answer]} • Kamu: ${user} ${ok?'✅':''}</div><div style="margin-top:4px">${q.explanation}</div>`;allExplanations.appendChild(div);});}
+  function finishSession(){stopTimer();gameArea.style.display='none';resultArea.style.display='block';const score=STATE.answers.filter(a=>a.chosen===a.correct).length;resultPlayer.textContent=STATE.player;resultScore.textContent=score;const lb=getLB();lb.push({name:STATE.player,score,when:Date.now()});lb.sort((a,b)=>b.score-a.score||a.when-b.when);saveLB(lb.slice(0,10));renderLB();allExplanations.innerHTML='';STATE.sessionQuestions.forEach((q,i)=>{const ans=STATE.answers[i];const user=ans.chosen>=0?q.options[ans.chosen]:'(tidak jawab)';const ok=ans.chosen===q.answer;const div=document.createElement('div');div.innerHTML=`<strong>${i+1}. ${q.q}</strong><div class="muted">Jawaban: ${q.options[q.answer]} • Kamu: ${user} ${ok?'✅':''}</div><div style="margin-top:4px">${q.explanation}</div>`;allExplanations.appendChild(div);});}
   function resetMenu(){stopTimer();STATE={player:'',level:'medium',sessionQuestions:[],currentIndex:0,answers:[],timerId:null,timeLeft:TIMER_PER_QUESTION};menuArea.style.display='block';gameArea.style.display='none';resultArea.style.display='none';nameInput.value='';setActiveTab('medium');}
   playAgainBtn.onclick=resetMenu;backHomeBtn.onclick=resetMenu;
-  el('showPoolBtn').onclick=()=>alert("Jumlah soal per level:\nMudah:5\nSedang:5\nSulit:5");
+  el('showPoolBtn').onclick=()=>alert(`Jumlah soal per level:\nMudah:${POOLS.easy.length}\nSedang:${POOLS.medium.length}\nSulit:${POOLS.hard.length}`);
   el('resetUsedBtn').onclick=()=>{if(confirm('Hapus riwayat soal yang sudah digunakan?')){localStorage.removeItem('usedQuestions');alert('Riwayat soal dihapus.');}};
   </script>
+
 </body>
 </html>
+
